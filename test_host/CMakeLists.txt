@@ -10,3 +10,18 @@ add_library(unity STATIC unity/unity.c)
 add_executable(test_smoke test_smoke.c)
 target_link_libraries(test_smoke unity)
 add_test(NAME smoke COMMAND test_smoke)
+
+include_directories(
+    ../components/wlogger_types/include
+    ../components/wlogger_csv/include
+)
+
+add_library(wlogger_csv_host STATIC ../components/wlogger_csv/wlogger_csv.c)
+target_include_directories(wlogger_csv_host PUBLIC
+    ../components/wlogger_types/include
+    ../components/wlogger_csv/include
+    host_shims)
+
+add_executable(test_csv test_csv.c)
+target_link_libraries(test_csv unity wlogger_csv_host)
+add_test(NAME csv COMMAND test_csv)
