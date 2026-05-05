@@ -22,7 +22,27 @@ void parse_ssid(const uint8_t *p, size_t n, char *out, size_t out_size) {
 
 void parse_adv_data(const uint8_t *adv, size_t len,
                     char *out_name, size_t out_size, uint16_t *mfg_id) {
-    (void)adv; (void)len;
     if (out_size) out_name[0] = '\0';
     if (mfg_id) *mfg_id = 0;
+    size_t i = 0;
+    while (i + 1 < len) {
+        uint8_t L = adv[i];
+        if (L == 0) break;
+        if (i + 1 + L > len) return;       // truncated
+        uint8_t T = adv[i + 1];
+        const uint8_t *V = &adv[i + 2];
+        size_t VL = L - 1;
+
+        if ((T == 0x08 || T == 0x09) && out_size > 0) {
+            size_t copy = VL < out_size - 1 ? VL : out_size - 1;
+            for (size_t k = 0; k < copy; ++k) {
+                uint8_t c = V[k];
+                out_name[k] = (c < 0x20 || c > 0x7E) ? '?' : (char)c;
+            }
+            out_name[copy] = '\0';
+        } else if (T == 0xFF && mfg_id && VL >= 2) {
+            *mfg_id = (uint16_t)(V[0] | (V[1] << 8));
+        }
+        i += 1 + L;
+    }
 }
