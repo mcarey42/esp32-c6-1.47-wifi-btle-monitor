@@ -43,3 +43,15 @@ target_include_directories(wlogger_bloom_host PUBLIC
 add_executable(test_bloom test_bloom.c)
 target_link_libraries(test_bloom unity wlogger_bloom_host m)
 add_test(NAME bloom COMMAND test_bloom)
+
+include_directories(../components/wlogger_stats/include)
+add_library(wlogger_stats_host STATIC ../components/wlogger_stats/wlogger_stats.c)
+target_include_directories(wlogger_stats_host PUBLIC
+    ../components/wlogger_types/include
+    ../components/wlogger_bloom/include
+    ../components/wlogger_stats/include
+    host_shims)
+
+add_executable(test_stats test_stats.c)
+target_link_libraries(test_stats unity wlogger_stats_host wlogger_bloom_host m)
+add_test(NAME stats COMMAND test_stats)
