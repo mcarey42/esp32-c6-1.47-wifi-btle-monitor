@@ -34,3 +34,12 @@ target_include_directories(wlogger_parsers_host PUBLIC
 add_executable(test_parsers test_parsers.c)
 target_link_libraries(test_parsers unity wlogger_parsers_host)
 add_test(NAME parsers COMMAND test_parsers)
+
+include_directories(../components/wlogger_bloom/include)
+add_library(wlogger_bloom_host STATIC ../components/wlogger_bloom/wlogger_bloom.c)
+target_include_directories(wlogger_bloom_host PUBLIC
+    ../components/wlogger_bloom/include host_shims)
+
+add_executable(test_bloom test_bloom.c)
+target_link_libraries(test_bloom unity wlogger_bloom_host m)
+add_test(NAME bloom COMMAND test_bloom)
