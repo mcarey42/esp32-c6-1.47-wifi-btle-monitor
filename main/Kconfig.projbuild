@@ -1,0 +1,13 @@
+menu "wlogger"
+    config WLOGGER_FAKE_RADIOS
+        bool "Use synthetic radio events instead of real Wi-Fi/BLE"
+        default n
+
+    config WLOGGER_WIFI_DWELL_MS
+        int "Per-channel Wi-Fi dwell time (ms)"
+        default 500
+
+    config WLOGGER_BLE_WINDOW_MS
+        int "BLE scan window per cycle (ms)"
+        default 2000
+endmenu
