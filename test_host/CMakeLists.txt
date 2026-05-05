@@ -25,3 +25,12 @@ target_include_directories(wlogger_csv_host PUBLIC
 add_executable(test_csv test_csv.c)
 target_link_libraries(test_csv unity wlogger_csv_host)
 add_test(NAME csv COMMAND test_csv)
+
+include_directories(../components/wlogger_parsers/include)
+add_library(wlogger_parsers_host STATIC ../components/wlogger_parsers/wlogger_parsers.c)
+target_include_directories(wlogger_parsers_host PUBLIC
+    ../components/wlogger_parsers/include host_shims)
+
+add_executable(test_parsers test_parsers.c)
+target_link_libraries(test_parsers unity wlogger_parsers_host)
+add_test(NAME parsers COMMAND test_parsers)
