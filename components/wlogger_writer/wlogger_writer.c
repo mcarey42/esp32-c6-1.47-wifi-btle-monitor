@@ -90,6 +90,7 @@ static void writer_task(void *_) {
 }
 
 esp_err_t wlogger_writer_start_task(void) {
-    BaseType_t r = xTaskCreate(writer_task, "writer", 4096, NULL, 4, NULL);
+    // 8 KB stack — writer_task has a 4 KB local CSV buffer plus FreeRTOS/log frame overhead.
+    BaseType_t r = xTaskCreate(writer_task, "writer", 8192, NULL, 4, NULL);
     return r == pdPASS ? ESP_OK : ESP_FAIL;
 }

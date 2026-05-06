@@ -27,7 +27,12 @@ esp_err_t wlogger_sd_mount(void) {
         .max_transfer_sz = 4096,
     };
     esp_err_t err = spi_bus_initialize(HOST_ID, &bus, SDSPI_DEFAULT_DMA);
-    if (err != ESP_OK) { ESP_LOGE(TAG, "spi_bus_initialize: %s", esp_err_to_name(err)); return err; }
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+        // ESP_ERR_INVALID_STATE means the bus is already initialized (e.g. by wlogger_lcd_init).
+        // We share SPI2 with the LCD; whichever driver inits first wins, the second just attaches.
+        ESP_LOGE(TAG, "spi_bus_initialize: %s", esp_err_to_name(err));
+        return err;
+    }
 
     sdspi_device_config_t dev = SDSPI_DEVICE_CONFIG_DEFAULT();
     dev.gpio_cs = PIN_CS;

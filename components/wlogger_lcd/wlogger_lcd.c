@@ -7,12 +7,17 @@
 #include "esp_log.h"
 #include <string.h>
 
-__attribute__((unused)) static const char *TAG = "lcd";
-#define PIN_BL   22
-#define PIN_RST  21
-#define PIN_DC   15
-#define PIN_CS   14
-// LCD shares SPI2 bus with SD; bus is initialized by wlogger_sd_mount before us.
+static const char *TAG = "lcd";
+#define PIN_BL    22
+#define PIN_RST   21
+#define PIN_DC    15
+#define PIN_CS    14
+#define PIN_MISO   5    // shared with SD
+#define PIN_MOSI   6    // shared with SD
+#define PIN_SCLK   7    // shared with SD
+// LCD owns the SPI2 bus init because it needs the larger max_transfer_sz
+// (LVGL partial-buffer flushes are ~14 KB). SD attaches as a second device
+// and tolerates the bus already being initialized.
 #define HOST_ID  SPI2_HOST
 
 #define X_GAP    34
@@ -38,6 +43,17 @@ esp_err_t wlogger_lcd_init(void) {
     gpio_config(&bl);
     gpio_set_level(PIN_BL, 1);
 
+    spi_bus_config_t bus = {
+        .miso_io_num = PIN_MISO, .mosi_io_num = PIN_MOSI,
+        .sclk_io_num = PIN_SCLK, .quadwp_io_num = -1, .quadhd_io_num = -1,
+        .max_transfer_sz = 16 * 1024,
+    };
+    esp_err_t bus_err = spi_bus_initialize(HOST_ID, &bus, SPI_DMA_CH_AUTO);
+    if (bus_err != ESP_OK && bus_err != ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "spi_bus_initialize: %s", esp_err_to_name(bus_err));
+        return bus_err;
+    }
+
     esp_lcd_panel_io_spi_config_t io_cfg = {
         .cs_gpio_num     = PIN_CS,
         .dc_gpio_num     = PIN_DC,
@@ -47,14 +63,16 @@ esp_err_t wlogger_lcd_init(void) {
         .lcd_cmd_bits    = 8,
         .lcd_param_bits  = 8,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)HOST_ID, &io_cfg, &s_io));
+    esp_err_t err = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)HOST_ID, &io_cfg, &s_io);
+    if (err != ESP_OK) { ESP_LOGE(TAG, "panel_io_spi: %s", esp_err_to_name(err)); return err; }
 
     esp_lcd_panel_dev_config_t panel_cfg = {
         .reset_gpio_num = PIN_RST,
         .rgb_ele_order  = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = 16,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(s_io, &panel_cfg, &s_panel));
+    err = esp_lcd_new_panel_st7789(s_io, &panel_cfg, &s_panel);
+    if (err != ESP_OK) { ESP_LOGE(TAG, "panel_st7789: %s", esp_err_to_name(err)); return err; }
     esp_lcd_panel_reset(s_panel);
     esp_lcd_panel_init(s_panel);
     esp_lcd_panel_invert_color(s_panel, true);

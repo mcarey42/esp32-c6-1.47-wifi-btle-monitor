@@ -42,6 +42,7 @@ static void scan_task(void *_) {
 }
 
 esp_err_t wlogger_scan_start_task(void) {
-    BaseType_t r = xTaskCreate(scan_task, "scan", 4096, NULL, 5, NULL);
+    // 8 KB stack — Wi-Fi/BLE callbacks chain into deep IDF stacks.
+    BaseType_t r = xTaskCreate(scan_task, "scan", 8192, NULL, 5, NULL);
     return r == pdPASS ? ESP_OK : ESP_FAIL;
 }
