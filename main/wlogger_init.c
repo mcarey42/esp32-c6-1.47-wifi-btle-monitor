@@ -9,6 +9,7 @@
 #include "wlogger_ui.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "esp_event.h"
 #include "esp_log.h"
 
 static const char *TAG = "init";
@@ -17,6 +18,14 @@ static recent_q_t    g_recent;
 static QueueHandle_t g_detect_q;
 
 esp_err_t wlogger_bringup(void) {
+    // Default event loop is required by esp_wifi for internal event delivery
+    // (e.g. WIFI_EVENT_HOME_CHANNEL_CHANGE). Without it the Wi-Fi stack
+    // logs "failed to post WiFi event" repeatedly.
+    esp_err_t evloop = esp_event_loop_create_default();
+    if (evloop != ESP_OK && evloop != ESP_ERR_INVALID_STATE) {
+        ESP_LOGW(TAG, "esp_event_loop_create_default: %s", esp_err_to_name(evloop));
+    }
+
     stats_init(&g_stats);
     recent_q_init(&g_recent);
     g_detect_q = xQueueCreate(256, sizeof(detection_t));
