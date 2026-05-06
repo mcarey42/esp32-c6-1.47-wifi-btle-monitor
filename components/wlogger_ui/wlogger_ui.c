@@ -17,6 +17,16 @@ static int           s_active = 0;
 
 esp_err_t wlogger_ui_init(stats_t *stats, recent_q_t *recent) {
     s_stats = stats; s_recent = recent;
+    if (!stats->sd_ok) {
+        lv_obj_t *bg = lv_obj_create(lv_screen_active());
+        lv_obj_set_size(bg, LV_PCT(100), LV_PCT(100));
+        lv_obj_set_style_bg_color(bg, lv_color_hex(0x600000), 0);
+        lv_obj_t *l = lv_label_create(bg);
+        lv_label_set_text(l, "NO SD CARD\n\nINSERT AND\nREBOOT");
+        lv_obj_set_style_text_color(l, lv_color_white(), 0);
+        lv_obj_center(l);
+        return ESP_OK;
+    }
     s_tabview = lv_tabview_create(lv_screen_active());
     lv_tabview_set_tab_bar_size(s_tabview, 0);
 
@@ -39,7 +49,7 @@ static void ui_task(void *_) {
         lv_timer_handler();
 
         btn_event_t be = wlogger_button_poll(UI_TICK_MS);
-        if (be == BTN_SHORT) {
+        if (be == BTN_SHORT && s_tabview) {
             s_active = (s_active + 1) % 4;
             lv_tabview_set_active(s_tabview, s_active, LV_ANIM_OFF);
         } else if (be == BTN_LONG) {
