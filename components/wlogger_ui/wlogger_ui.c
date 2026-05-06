@@ -56,6 +56,19 @@ static void ui_task(void *_) {
         if (s_active == 3 && now - status_last >= 1000) { status_last = now; render = true; }
         if (render && p->update) p->update(s_stats, s_recent);
 
+        static uint32_t led_last = 0;
+        if (now - led_last >= 1000) {
+            led_last = now;
+            led_phase_t ph = (((now / 1000) % 9) < 7) ? LED_PHASE_WIFI : LED_PHASE_BLE;
+            uint16_t rate = stats_rate_last_minute(s_stats);
+            led_event_t evt = LED_EVT_NONE;
+            if (!s_stats->sd_ok) evt = LED_EVT_FAULT;
+            else if (s_stats->dropped_events > 0 &&
+                     (s_stats->dropped_events % 10) == 0)
+                evt = LED_EVT_DROP;
+            wlogger_led_set(ph, rate, evt);
+        }
+
         vTaskDelay(pdMS_TO_TICKS(UI_TICK_MS));
     }
 }
