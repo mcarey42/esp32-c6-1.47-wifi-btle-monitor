@@ -36,7 +36,9 @@ static void scan_task(void *_) {
         vTaskDelay(pdMS_TO_TICKS(100));
 #else
         if (s_wifi_ok) wlogger_scan_wifi_sweep();
+        vTaskDelay(pdMS_TO_TICKS(1000));   // radio rest, lets the chip cool between phases
         if (s_ble_ok)  wlogger_scan_ble_window(CONFIG_WLOGGER_BLE_WINDOW_MS);
+        vTaskDelay(pdMS_TO_TICKS(1000));   // and again before the next Wi-Fi sweep
 #endif
     }
 }

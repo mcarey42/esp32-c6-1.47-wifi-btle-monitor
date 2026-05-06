@@ -1,5 +1,6 @@
 #include "wlogger_lcd.h"
 #include "driver/gpio.h"
+#include "driver/ledc.h"
 #include "driver/spi_master.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_vendor.h"
@@ -36,12 +37,25 @@ static void lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px
 }
 
 esp_err_t wlogger_lcd_init(void) {
-    gpio_config_t bl = {
-        .pin_bit_mask = 1ULL << PIN_BL,
-        .mode = GPIO_MODE_OUTPUT,
+    // LEDC PWM backlight @ 80% duty (5 kHz, 10-bit). Lower duty = cooler board.
+    ledc_timer_config_t lt = {
+        .speed_mode      = LEDC_LOW_SPEED_MODE,
+        .timer_num       = LEDC_TIMER_0,
+        .duty_resolution = LEDC_TIMER_10_BIT,
+        .freq_hz         = 5000,
+        .clk_cfg         = LEDC_AUTO_CLK,
     };
-    gpio_config(&bl);
-    gpio_set_level(PIN_BL, 1);
+    ledc_timer_config(&lt);
+    ledc_channel_config_t lc = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .channel    = LEDC_CHANNEL_0,
+        .timer_sel  = LEDC_TIMER_0,
+        .intr_type  = LEDC_INTR_DISABLE,
+        .gpio_num   = PIN_BL,
+        .duty       = 819,    // 80% of 1024
+        .hpoint     = 0,
+    };
+    ledc_channel_config(&lc);
 
     spi_bus_config_t bus = {
         .miso_io_num = PIN_MISO, .mosi_io_num = PIN_MOSI,
