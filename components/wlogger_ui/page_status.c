@@ -1,8 +1,19 @@
 #include "page_internal.h"
+#include "wlogger_thermal.h"
 #include "freertos/semphr.h"
 #include <stdio.h>
 
-static lv_obj_t *s_file, *s_size, *s_free, *s_drops, *s_flags;
+static lv_obj_t *s_file, *s_size, *s_free, *s_drops, *s_flags, *s_temp;
+
+static const char *band_str(thermal_band_t b) {
+    switch (b) {
+        case THERMAL_COOL:     return "COOL";
+        case THERMAL_WARM:     return "WARM";
+        case THERMAL_HOT:      return "HOT";
+        case THERMAL_CRITICAL: return "CRIT";
+        default:               return "?";
+    }
+}
 
 static void update(stats_t *st, recent_q_t *r) {
     (void)r;
@@ -21,6 +32,15 @@ static void update(stats_t *st, recent_q_t *r) {
         st->wifi_ok ? "Y" : "N", st->ble_ok ? "Y" : "N", st->sd_ok ? "Y" : "N");
     lv_label_set_text(s_flags, tmp);
     xSemaphoreGive(st->mtx);
+
+    int8_t c = wlogger_thermal_celsius();
+    thermal_band_t b = wlogger_thermal_band();
+    if (c == -127) {
+        lv_label_set_text(s_temp, "Temp: --");
+    } else {
+        snprintf(tmp, sizeof tmp, "Temp: %dC %s", (int)c, band_str(b));
+        lv_label_set_text(s_temp, tmp);
+    }
 }
 
 ui_page_t page_status_create(lv_obj_t *parent) {
@@ -32,5 +52,6 @@ ui_page_t page_status_create(lv_obj_t *parent) {
     s_free  = lv_label_create(p);
     s_drops = lv_label_create(p);
     s_flags = lv_label_create(p);
+    s_temp  = lv_label_create(p);
     return (ui_page_t){ .root = p, .update = update };
 }

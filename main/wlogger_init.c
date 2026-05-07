@@ -6,6 +6,7 @@
 #include "wlogger_stats.h"
 #include "wlogger_writer.h"
 #include "wlogger_scan.h"
+#include "wlogger_thermal.h"
 #include "wlogger_ui.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -47,6 +48,13 @@ esp_err_t wlogger_bringup(void) {
 
     wlogger_writer_init(g_detect_q, &g_stats, &g_recent);
     wlogger_writer_start_task();
+
+    // Start the thermal task BEFORE scan_task — scan_task reads
+    // wlogger_thermal_extra_delay_ms() each cycle; if thermal isn't
+    // running yet that's fine (returns 0), but having it up first
+    // means scan starts at the correct cadence from cycle 1.
+    wlogger_thermal_init();
+    wlogger_thermal_start_task();
 
     if (wlogger_scan_init(g_detect_q) != ESP_OK) {
         ESP_LOGE(TAG, "all radios failed");

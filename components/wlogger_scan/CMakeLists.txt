@@ -3,5 +3,5 @@ idf_component_register(
          "wlogger_scan_fake.c"
     INCLUDE_DIRS "include"
     PRIV_INCLUDE_DIRS "."
-    REQUIRES wlogger_types wlogger_parsers esp_wifi esp_event nvs_flash bt esp_timer
+    REQUIRES wlogger_types wlogger_parsers wlogger_thermal esp_wifi esp_event nvs_flash bt esp_timer
 )

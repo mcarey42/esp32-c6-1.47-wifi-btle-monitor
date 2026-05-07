@@ -1,5 +1,6 @@
 #include "wlogger_scan.h"
 #include "wlogger_scan_internal.h"
+#include "wlogger_thermal.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -36,9 +37,11 @@ static void scan_task(void *_) {
         vTaskDelay(pdMS_TO_TICKS(100));
 #else
         if (s_wifi_ok) wlogger_scan_wifi_sweep();
-        vTaskDelay(pdMS_TO_TICKS(1000));   // radio rest, lets the chip cool between phases
+        // Base 1 s rest + extra delay from the thermal task. As the board
+        // heats up, this delay grows; in CRITICAL band it can be 8 s.
+        vTaskDelay(pdMS_TO_TICKS(1000 + wlogger_thermal_extra_delay_ms()));
         if (s_ble_ok)  wlogger_scan_ble_window(CONFIG_WLOGGER_BLE_WINDOW_MS);
-        vTaskDelay(pdMS_TO_TICKS(1000));   // and again before the next Wi-Fi sweep
+        vTaskDelay(pdMS_TO_TICKS(1000 + wlogger_thermal_extra_delay_ms()));
 #endif
     }
 }

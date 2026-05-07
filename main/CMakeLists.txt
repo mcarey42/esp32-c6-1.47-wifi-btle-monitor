@@ -4,4 +4,5 @@ idf_component_register(
     REQUIRES esp_event nvs_flash
              wlogger_types wlogger_stats wlogger_writer wlogger_scan
              wlogger_ui wlogger_lcd wlogger_led wlogger_button wlogger_sd
+             wlogger_thermal
 )
