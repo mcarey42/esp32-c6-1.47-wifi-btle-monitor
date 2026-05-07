@@ -1,6 +1,7 @@
 #include "wlogger_writer.h"
 #include "wlogger_csv.h"
 #include "wlogger_sd.h"
+#include "wlogger_lcd.h"   // for wlogger_lcd_bus_lock/unlock — SPI2 is shared with LCD
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/task.h"
@@ -50,7 +51,10 @@ static void writer_task(void *_) {
     size_t buf_len = 0;
     TickType_t last_flush = xTaskGetTickCount();
 
-    if (wlogger_sd_open_new_file(&s_file, 0, "balanced") != ESP_OK) {
+    wlogger_lcd_bus_lock();
+    esp_err_t open_err = wlogger_sd_open_new_file(&s_file, 0, "balanced");
+    wlogger_lcd_bus_unlock();
+    if (open_err != ESP_OK) {
         ESP_LOGE(TAG, "initial file open failed; writer will idle");
     }
 
@@ -65,8 +69,15 @@ static void writer_task(void *_) {
         bool full  = buf_len > sizeof(buf) - 256;
         bool stale = (xTaskGetTickCount() - last_flush) > pdMS_TO_TICKS(1000);
         if ((full || stale) && s_file.fp && buf_len > 0) {
+            // SPI2 is shared with the LCD — hold the bus mutex for the
+            // duration of the SD transactions so the LCD's queued DMA
+            // can't collide with sdspi_host's polling-mode HW commands.
+            wlogger_lcd_bus_lock();
             size_t w = fwrite(buf, 1, buf_len, s_file.fp);
             fflush(s_file.fp);
+            uint64_t freeb = wlogger_sd_free_bytes();
+            wlogger_lcd_bus_unlock();
+
             s_file.bytes_written += (uint32_t)w;
             buf_len = 0;
             last_flush = xTaskGetTickCount();
@@ -74,16 +85,18 @@ static void writer_task(void *_) {
             xSemaphoreTake(s_stats->mtx, portMAX_DELAY);
             strncpy(s_stats->current_file, s_file.path, sizeof s_stats->current_file - 1);
             s_stats->current_file_bytes = s_file.bytes_written;
-            s_stats->sd_free_bytes = wlogger_sd_free_bytes();
+            s_stats->sd_free_bytes = freeb;
             xSemaphoreGive(s_stats->mtx);
         }
 
         bool need = s_rotate_req || wlogger_sd_should_rotate(&s_file,
             (uint32_t)(esp_timer_get_time() / 1000000));
         if (need) {
+            wlogger_lcd_bus_lock();
             if (s_file.fp) wlogger_sd_close(&s_file);
             wlogger_sd_open_new_file(&s_file,
                 (uint32_t)(esp_timer_get_time() / 1000000), "balanced");
+            wlogger_lcd_bus_unlock();
             s_rotate_req = false;
         }
     }
