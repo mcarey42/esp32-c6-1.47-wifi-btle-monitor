@@ -88,4 +88,4 @@ see `components/wlogger_lcd/wlogger_lcd.c` for the locking pattern.
 
 ## License
 
-See `LICENSE` (TBD — none committed yet).
+MIT — see [`LICENSE`](LICENSE).
